@@ -325,7 +325,7 @@ get_stop_frequency <- function(g1, start_time,
 #' @param x a row from a csv describing mtc 511 data sources
 #' @return a spatial dataframe for april amendment 1, or an error message
 #' @export
-process_april_amendment1 <- function(x) {
+process_april_amendment_1 <- function(x) {
   agency_id1 <- x[['PrivateCode']]
   print(agency_id1)
   zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
@@ -392,7 +392,16 @@ process_april_amendment1 <- function(x) {
 #' @param x a row from a csv describing mtc 511 data sources
 #' @return a spatial dataframe for april amendment 2, or an error message
 #' @export
-process_april_amendment2 <- function(x) {
+process_april_amendment_2 <- function(x) {
+  agency_id1 <- x[['PrivateCode']]
+  print(agency_id1)
+  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
+                           api_key,
+                           '&operator_id=',
+                           agency_id1)
+  
+  g1 <- zip_request_url %>% import_gtfs
+  
   time_start1 <- "06:00:00" 
   time_end1 <- "19:59:00"
   
@@ -431,7 +440,16 @@ process_april_amendment2 <- function(x) {
 #' @param x a row from a csv describing mtc 511 data sources
 #' @return a spatial dataframe for april amendment 2, or an error message
 #' @export
-process_april_amendment3 <- function(x) {
+process_april_amendment_3 <- function(x) {
+  agency_id1 <- x[['PrivateCode']]
+  print(agency_id1)
+  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
+                           api_key,
+                           '&operator_id=',
+                           agency_id1)
+  
+  g1 <- zip_request_url %>% import_gtfs
+  
   time_start1 <- "08:00:00" 
   time_end1 <- "19:59:00"
   

@@ -71,7 +71,7 @@ o511['succeeded2'] <- succeeded
 o511['error_message2'] <- ""
 o511[!succeeded,'error_message2'] <- message
 
-results <- apply(o511[1,], 1, function(x) try(process_april_amendment3(x)))
+results <- apply(o511[1:5,], 1, function(x) try(process_april_amendment3(x)))
 is.error <- function(x) inherits(x, "try-error")
 is.sf_df <- function(x) inherits(x, "sf")
 succeeded <- !vapply(results, is.error, logical(1))
