@@ -36,6 +36,8 @@ library(readr)
 
 o511 <- read_csv("https://gist.githubusercontent.com/tibbl35/d49fa2c220733b0072fc7c59e0ac412b/raw/cff45d8c8dd2ea951b83c0be729abe72f35b13f7/511_orgs.csv")
 
+o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
+
 #Sys.setenv(APIKEY511 = "YOURKEYHERE")
 api_key = Sys.getenv("APIKEY511")
 
