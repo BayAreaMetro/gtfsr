@@ -368,17 +368,12 @@ process_april_amendment_1 <- function(x) {
       summarise(headways_am = as.integer(round(median(headway_am),0)), ### we use median here because it is the most representative, 
                 headways_pm = as.integer(round(median(headway_pm),0))) ### and more robust against outliers than mean
     
-    qualifying_routes_stats <- route_headways %>% 
-      filter(route_headways$headways_am < 16 & 
-               route_headways$headways_pm < 16) %>%
-      as.data.frame()
-    
-    route_ids <- unique(qualifying_routes_stats$route_id)
+    route_ids <- unique(route_headways$route_id)
     
     qualifying_stops <- get_stops_for_routes(g1,route_ids,weekday_service_ids(g1))
     
     qualifying_stops_sf <- left_join(qualifying_stops,
-                                     qualifying_routes_stats, 
+                                     route_headways, 
                                      by="route_id")
     
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
@@ -418,16 +413,12 @@ process_april_amendment_2 <- function(x) {
     ### we use median here because it is the most representative, 
     ### and more robust against outliers than mean
     
-    qualifying_routes_stats <- route_headways %>% 
-      filter(headways<21) %>%
-      as.data.frame()
-    
-    route_ids <- unique(qualifying_routes_stats$route_id)
+    route_ids <- unique(route_headways$route_id)
     
     qualifying_stops <- get_stops_for_routes(g1,route_ids,weekday_service_ids(g1))
     
     qualifying_stops_sf <- left_join(qualifying_stops,
-                                     qualifying_routes_stats, 
+                                     route_headways, 
                                      by="route_id")
     
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
@@ -479,16 +470,12 @@ process_april_amendment_3 <- function(x) {
       summarise(headways_sat = as.integer(round(median(headway_sat),0)), ### we use median here because it is the most representative, 
                 headways_sun = as.integer(round(median(headway_sun),0))) ### and more robust against outliers than mean
     
-    qualifying_routes_stats <- route_headways %>% 
-      filter(route_headways$headways_sat < 31 & route_headways$headways_sun < 31) %>%
-      as.data.frame()
-    
-    route_ids <- unique(qualifying_routes_stats$route_id)
+    route_ids <- unique(route_headways$route_id)
     
     qualifying_stops <- get_stops_for_routes(g1,route_ids,saturday_service_ids(g1))
     
     qualifying_stops_sf <- left_join(qualifying_stops,
-                                     qualifying_routes_stats, 
+                                     route_headways, 
                                      by="route_id")
     
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
