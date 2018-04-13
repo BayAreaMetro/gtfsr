@@ -384,6 +384,8 @@ process_april_amendment_1 <- function(x) {
   return(qualifying_stops_sf)
 }
 
+#' todo: turn this into a more generic function
+#' should take: start_time, end_time, gtfs_object, and some kind of scheduleing (array of days or "weekend")
 #` Get stop frequency for buses based on mtc headway calculations
 #' @param x a row from a csv describing mtc 511 data sources
 #' @return a spatial dataframe for april amendment 2, or an error message
