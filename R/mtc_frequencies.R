@@ -384,6 +384,7 @@ process_april_amendment_1 <- function(x) {
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
     qualifying_stops_sf <- qualifying_stops_sf %>% 
       select(stop_id,route_id,stop_name,headways_am,headways_pm)
+    qualifying_stops_sf$agency_id <- agency_id1
   }
   return(qualifying_stops_sf)
 }
@@ -432,6 +433,7 @@ process_april_amendment_2 <- function(x) {
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
     
     qualifying_stops_sf <- qualifying_stops_sf %>% select(stop_id,route_id,stop_name,headways)
+    qualifying_stops_sf$agency_id <- agency_id1
   }
   return(qualifying_stops_sf)
 }
@@ -492,6 +494,7 @@ process_april_amendment_3 <- function(x) {
     qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
     
     qualifying_stops_sf <- qualifying_stops_sf %>% select(stop_id,route_id,stop_name,headways_sat,headways_sun)
+    qualifying_stops_sf$agency_id <- agency_id1
   }
   return(qualifying_stops_sf)
 }
