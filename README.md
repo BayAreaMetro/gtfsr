@@ -39,7 +39,7 @@ o511 <- read_csv("https://gist.githubusercontent.com/tibbl35/d49fa2c220733b0072f
 #Sys.setenv(APIKEY511 = "YOURKEYHERE")
 api_key = Sys.getenv("APIKEY511")
 
-results <- apply(o511, 1, function(x) try(process_april_amendment1(x)))
+results <- apply(o511, 1, function(x) try(process_april_amendment_1(x)))
 is.error <- function(x) inherits(x, "try-error")
 succeeded <- !vapply(results, is.error, logical(1))
 get.error.message <- function(x) {attr(x,"condition")$message}
@@ -55,7 +55,7 @@ o511['error_message1'] <- ""
 o511[!succeeded,'error_message1'] <- message
 write_csv(o511,"gtfs_processing.csv")
 
-results <- apply(o511[1,], 1, function(x) try(process_april_amendment2(x)))
+results <- apply(o511[1,], 1, function(x) try(process_april_amendment_2(x)))
 is.error <- function(x) inherits(x, "try-error")
 is.sf_df <- function(x) inherits(x, "sf")
 succeeded <- !vapply(results, is.error, logical(1))
@@ -71,7 +71,7 @@ o511['succeeded2'] <- succeeded
 o511['error_message2'] <- ""
 o511[!succeeded,'error_message2'] <- message
 
-results <- apply(o511[1,], 1, function(x) try(process_april_amendment3(x)))
+results <- apply(o511[1,], 1, function(x) try(process_april_amendment_3(x)))
 is.error <- function(x) inherits(x, "try-error")
 is.sf_df <- function(x) inherits(x, "sf")
 succeeded <- !vapply(results, is.error, logical(1))
