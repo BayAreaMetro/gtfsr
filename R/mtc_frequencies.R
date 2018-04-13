@@ -255,6 +255,8 @@ get_stops_for_route <- function(g1, select_route_id, select_service_id) {
   return(some_stops)
 }
 
+#' TODO: this should get routes for stops by direction_id
+#' should take list of directions and routes (optionally?)
 #` Get a set of stops for a set of routes
 #' @param a dataframe output by join_mega_and_hf_routes()
 #' @param route_ids the ids of the routes
