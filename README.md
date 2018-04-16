@@ -41,16 +41,6 @@ o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
 #Sys.setenv(APIKEY511 = "YOURKEYHERE")
 api_key = Sys.getenv("APIKEY511")
 
-results <- apply(o511, 1, function(x) try(process_april_amendment_1(x)))
-is.error <- function(x) inherits(x, "try-error")
-succeeded <- !vapply(results, is.error, logical(1))
-get.error.message <- function(x) {attr(x,"condition")$message}
-message <- vapply(results[!succeeded], get.error.message, "")
-df_stops <- do.call("rbind", results[succeeded])
-st_write(df_stops,"827_april_amendment1.csv", driver="CSV")
-st_write(df_stops,"827_april_amendment1.gpkg",driver="GPKG")
-st_write(df_stops,"827_april_amendment1.shp", driver="ESRI Shapefile")
-
 o511['processed1'] <- TRUE
 o511['succeeded1'] <- succeeded
 o511['error_message1'] <- ""
@@ -68,27 +58,5 @@ st_write(df_stops,"827_april_amendment2.csv", driver="CSV")
 st_write(df_stops,"827_april_amendment2.gpkg",driver="GPKG")
 st_write(df_stops,"827_april_amendment2.shp", driver="ESRI Shapefile")
 
-o511['processed2'] <- TRUE
-o511['succeeded2'] <- succeeded
-o511['error_message2'] <- ""
-o511[!succeeded,'error_message2'] <- message
-
-results <- apply(o511[1,], 1, function(x) try(process_april_amendment_3(x)))
-is.error <- function(x) inherits(x, "try-error")
-is.sf_df <- function(x) inherits(x, "sf")
-succeeded <- !vapply(results, is.error, logical(1))
-get.error.message <- function(x) {attr(x,"condition")$message}
-message <- vapply(results[!succeeded], get.error.message, "")
-df_stops <- do.call("rbind", results[succeeded])
-st_write(df_stops,"827_april_amendment3.csv", driver="CSV")
-st_write(df_stops,"827_april_amendment3.gpkg",driver="GPKG")
-st_write(df_stops,"827_april_amendment3.shp", driver="ESRI Shapefile")
-
-#write processing records back out
-o511['processed3'] <- TRUE
-o511['succeeded3'] <- succeeded
-o511['error_message3'] <- ""
-o511[!succeeded,'error_message3'] <- message
-write_csv(o511,"gtfs_processing.csv")
 ```
 

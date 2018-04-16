@@ -222,19 +222,6 @@ count_trips_for_service <- function(g1) {
                  desc(n_trips)))
 }
 
-#` Get the service_id of the day of service with the most trips
-#' @param a gtfsr object
-#' @param service_ids (optional) a set of service ids you want to check against
-#' @return the service with the most trips (likely the most representative)
-#' @export
-get_representative_service <- function(g1, service_ids) {
-  df <- count_trips_for_service(g1)
-  if(!missing(service_ids)) {
-    df <- df %>% filter(df$service_id %in% service_ids)
-  }
-  return(df[[1,1]])
-}
-
 #` Get a set of stops for a route
 #' @param a dataframe output by join_mega_and_hf_routes()
 #' @param route_id the id of the route
@@ -261,9 +248,10 @@ get_stops_for_route <- function(g1, select_route_id, select_service_id) {
 #' @param a dataframe output by join_mega_and_hf_routes()
 #' @param route_ids the ids of the routes
 #' @param service_id the service for which to get stops 
+#' @param directional if the stops should by related to a route direction (e.g. inbound, outbound) - currently not implemented
 #' @return stops for routes
 #' @export
-get_stops_for_routes <- function(g1, route_ids, select_service_ids) {
+get_stops_for_routes <- function(g1, route_ids, select_service_ids, directional=FALSE) {
   l1 = list()
   i <- 1
   for (route_id in route_ids) {
@@ -297,19 +285,9 @@ get_stop_frequency <- function(g1, start_time,
                                service="weekday") {
   df_sr <- join_all_gtfs_tables(g1)
   df_sr <- make_arrival_hour_less_than_24(df_sr)
-  if(service=="weekday"){
-    df_sr <- all_weekday_bus_service(df_sr)
-  } else if (service=="saturday") {
-    df_sr <- saturday_bus_service(df_sr) }
-    else if (service=="sunday") {
-    df_sr <- sunday_bus_service(df_sr)
-  } else {
-    print("unknown service-should be weekend or weekday")
-  }
-  
   if (has_service(df_sr)) {
-    
-    output_stops <- filter_by_time(df_sr,
+    output_stops <- filter_by_schedule(df_sr,service)
+    output_stops <- filter_by_time(output_stops,
                                time_start=start_time, 
                                time_end=end_time)
     
@@ -322,6 +300,101 @@ get_stop_frequency <- function(g1, start_time,
     return(output_stops)
   }
 }
+
+#` Get stop frequency for buses based on mtc headway calculations
+#' @param gtfs_df a mega df object made by join_all_gtfs_tables
+#' @param service default to "weekday", can also use "weekend" currently
+#' @return a gtfs mega df object filtered
+#' @export
+filter_by_schedule <- function(gtfs_df, service="weekday") {
+  if(service=="weekday"){
+    gtfs_df <- all_weekday_bus_service(gtfs_df)
+  } else if (service=="saturday") {
+    gtfs_df <- saturday_bus_service(gtfs_df) }
+  else if (service=="sunday") {
+    gtfs_df <- sunday_bus_service(gtfs_df)
+  } else {
+    print("unknown service-should be weekend or weekday")
+  }
+  return(gtfs_df)
+}
+
+#' Use the gtfsr import_gtfs function to import an MTC 511 api endpoint to a standarf gtfsr object
+#' @param privatecode this is the shortcode used by 511 to refer to operators
+#' @return a gtfsr object
+#' @export
+get_mtc_511_gtfs <- function(privatecode,api_key) {
+  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
+                           api_key,
+                           '&operator_id=',
+                           privatecode)
+  g1 <- zip_request_url %>% import_gtfs
+  return(g1)
+}
+
+#` Get stop frequency for buses aggregated up to routes
+#' should take: 
+#' @param gtfs_obj a standard gtfsr object
+#' @param start_time, 
+#' @param end_time, 
+#' @param service e.g. "weekend" or "saturday"
+#' @return route_headways a dataframe of route headways
+#' @export
+get_route_frequency <- function(gtfs_obj,
+                                time_start1, 
+                                time_end1, 
+                                service=service) {
+  stop_frequency_df <- get_stop_frequency(gtfs_obj,
+                      time_start1, 
+                      time_end1, 
+                      service=service)  
+  
+  if (has_service(stop_frequency_df)) {
+    route_headways <- stop_frequency_df %>%
+      group_by(route_id) %>%
+      summarise(median_headways = as.integer(round(median(headway),0)),
+                mean_headways = as.integer(round(mean(headway),0)),
+                std_dev_headways = round(sd(headway),2),
+                observations = n())
+  } else
+  {
+    stop("agency gtfs has no published service for the specified period")
+  }
+  return(route_headways)
+}
+
+#` Get stop frequency for buses based on mtc headway calculations
+#' should take: start_time, end_time, gtfs_object, and some kind of scheduleing (array of days or "weekend")
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with route level 
+#' frequencies (routes_df_frequency) as a dataframe 
+#' and a spatial stops_sf (stops_sf_frequency) with median frequencies
+#' @export
+assign_frequencies_to_all_stops <- function(gtfs_obj, 
+                                      time_start1, 
+                                      time_end1,
+                                      service) {
+  routes_df_frequency <- get_route_frequency(gtfs_obj,
+                      time_start1, 
+                      time_end1, 
+                      service=service)
+  
+  stops_df <- get_stops_for_routes(g1,
+                                     route_ids,
+                                     weekday_service_ids(g1))
+    
+  stops_df_frequency <- left_join(stops_df,
+                        routes_df_frequency, 
+                        by="route_id")
+    
+  stops_sf_frequency <- stops_df_as_sf(stops_df_frequency)
+  stops_sf_frequency <- stops_sf_frequency %>% select(stop_id,route_id,stop_name,mean_headways,median_headways,std_dev_headways,observations)
+  
+  gtfs_obj$stops_sf_frequency <- stops_sf_frequency
+  gtfs_obj$routes_df_frequency <- routes_df_frequency
+  return(gtfs_obj)
+}
+
 
 #` Get stop frequency for buses based on mtc headway calculations
 #' @param x a row from a csv describing mtc 511 data sources
@@ -386,52 +459,8 @@ process_april_amendment_1 <- function(x) {
   return(qualifying_stops_sf)
 }
 
-#' todo: turn this into a more generic function
-#' should take: start_time, end_time, gtfs_object, and some kind of scheduleing (array of days or "weekend")
-#` Get stop frequency for buses based on mtc headway calculations
-#' @param x a row from a csv describing mtc 511 data sources
-#' @return a spatial dataframe for april amendment 2, or an error message
-#' @export
-process_april_amendment_2 <- function(x) {
-  agency_id1 <- x[['PrivateCode']]
-  print(agency_id1)
-  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
-                           api_key,
-                           '&operator_id=',
-                           agency_id1)
-  
-  g1 <- zip_request_url %>% import_gtfs
-  
-  time_start1 <- "06:00:00" 
-  time_end1 <- "19:59:00"
-  
-  stops_freq <- get_stop_frequency(g1, 
-                                   time_start1, 
-                                   time_end1, 
-                                   service="weekday")
-  
-  if (has_service(stops_freq)) {
-    route_headways <- stops_freq %>%
-      group_by(route_id) %>%
-      summarise(headways = as.integer(round(median(headway),0)))
-    ### we use median here because it is the most representative, 
-    ### and more robust against outliers than mean
-    
-    route_ids <- unique(route_headways$route_id)
-    
-    qualifying_stops <- get_stops_for_routes(g1,route_ids,weekday_service_ids(g1))
-    
-    qualifying_stops_sf <- left_join(qualifying_stops,
-                                     route_headways, 
-                                     by="route_id")
-    
-    qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
-    
-    qualifying_stops_sf <- qualifying_stops_sf %>% select(stop_id,route_id,stop_name,headways)
-    qualifying_stops_sf$agency_id <- agency_id1
-  }
-  return(qualifying_stops_sf)
-}
+
+
 
 #` Get stop frequency for buses based on mtc headway calculations
 #' @param x a row from a csv describing mtc 511 data sources
@@ -489,3 +518,4 @@ process_april_amendment_3 <- function(x) {
   }
   return(qualifying_stops_sf)
 }
+
