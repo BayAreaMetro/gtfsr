@@ -383,7 +383,7 @@ assign_frequencies_to_all_stops <- function(gtfs_obj,
   
   stops_df <- get_stops_for_routes(gtfs_obj,
                                      route_ids,
-                                     weekday_service_ids(g1))
+                                     weekday_service_ids(gtfs_obj))
     
   stops_df_frequency <- left_join(stops_df,
                         routes_df_frequency, 
