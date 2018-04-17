@@ -34,11 +34,19 @@ library(dplyr)
 library(lubridate)
 library(readr)
 
+
+time_start1 <- "06:00:00" 
+time_end1 <- "19:59:00"
+threshold <- 24 #minutes
+
+
 o511 <- read_csv("https://gist.githubusercontent.com/tibbl35/d49fa2c220733b0072fc7c59e0ac412b/raw/cff45d8c8dd2ea951b83c0be729abe72f35b13f7/511_orgs.csv")
 
 o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
 
-#Sys.setenv(APIKEY511 = "yourkey")
+o511 <- o511[1:4,]
+
+Sys.setenv(APIKEY511 = "d590ea41-b6d5-4cb4-8679-ad4476cba6a8")
 api_key = Sys.getenv("APIKEY511")
 
 download_results <- apply(o511, 1, function(x) try(get_mtc_511_gtfs(x['PrivateCode'],api_key)))
@@ -55,9 +63,7 @@ o511[!imported_success,'error_message1'] <- import_error_message
 #save all objects to disk
 #save(download_results, file = "gtfs511_downloads.RData")
 
-time_start1 <- "06:00:00" 
-time_end1 <- "19:59:00"
-threshold <- 24 #minutes
+
 
 process_results <- lapply(download_results, 
                           FUN=function(x) {
@@ -98,5 +104,21 @@ o511[imported_success,'threshold_stops'] <- threshold_stops
 o511[imported_success,'unique_stops_processed'] <- unique_stops_processed
 o511[imported_success,'unique_routes_processed'] <- unique_routes_processed
 
+get.routes.table <- function(x) {x$routes_df_frequency}
+get.stops.table <- function(x) {x$stops_sf_frequency}
+
+l_routes_df <- lapply(process_results[processed_success], FUN=get.routes.table)
+bay_area_routes_df <- do.call("rbind", l_df)
+
+write_excel_csv(bay_area_routes_df,"827_april_amendment2.csv")
+
+l_stops_sf <- lapply(process_results[processed_success], FUN=get.stops.table)
+bay_area_stops_sf <- do.call("rbind", l_sf)
+
+st_write(bay_area_stops_sf,"827_april_amendment2.csv", driver="CSV")
+st_write(bay_area_stops_sf,"827_april_amendment2.gpkg",driver="GPKG")
+st_write(bay_area_stops_sf,"827_april_amendment2.shp", driver="ESRI Shapefile")
+
+write_csv(o511,"processing_notes.csv")
 ```
 
