@@ -62,9 +62,11 @@ o511[!imported_success,'error_message1'] <- import_error_message
 
 #save all objects to disk
 save(download_results, file = "gtfs511_downloads.RData")
+```
 
+### Get MTC/CA Headways for Routes and Stops
 
-
+```
 process_results <- lapply(download_results, 
                           FUN=function(x) {
                             try(assign_frequencies_to_all_stops(x,
@@ -76,18 +78,43 @@ process_results <- lapply(download_results,
 is.error <- function(x) inherits(x, "try-error")
 processed_success <- vapply(process_results, is.gtfs.obj, logical(1))
 get.error.message <- function(x) {attr(x,"condition")$message}
-get.routes.processed <- function(x) {length(unique(x$routes_df_frequency$route_id))}
-get.stops.processed <- function(x) {length(unique(x$stops_sf_frequency$stop_id))}
 
-get.routes.above.threshold <- function(x) {table(x$routes_df_frequency$median_headways>threshold)[['TRUE']]}
-get.stops.above.threshold <- function(x) {table(x$stops_sf_frequency$median_headways>threshold)[['TRUE']]}
+get.routes.table <- function(x) {x$routes_df_frequency}
+get.stops.table <- function(x) {x$stops_sf_frequency}
+
+l_routes_df <- lapply(process_results[processed_success], FUN=get.routes.table)
+bay_area_routes_df <- do.call("rbind", l_routes_df)
+
+
+
+write_excel_csv(bay_area_routes_df,"827_april_amendment2_routes.csv")
+
+l_stops_sf <- lapply(process_results[processed_success], FUN=get.stops.table)
+bay_area_stops_sf <- do.call("rbind", l_stops_sf)
+
+#st_write(bay_area_stops_sf,"827_april_amendment2.csv", driver="CSV")
+st_write(bay_area_stops_sf,"827_april_amendment2.gpkg",driver="GPKG")
+st_write(bay_area_stops_sf,"827_april_amendment2.shp", driver="ESRI Shapefile")
+
+```
+
+### Summarize by Route Headway Threshold
+
+Get summaries for different counts of routes and stops with changing thresholds for headway for the given time period as processed:
+
+```
+
+threshold <- 22 #minutes
+
+get.routes.below.threshold <- function(x) {table(x$routes_df_frequency$median_headways>threshold)[['TRUE']]}
+get.stops.below.threshold <- function(x) {table(x$stops_sf_frequency$median_headways>threshold)[['TRUE']]}
 
 process_message <- vapply(process_results[!processed_success], get.error.message, "")
 unique_stops_processed <- vapply(process_results[processed_success], get.stops.processed, 0)
 unique_routes_processed <- vapply(process_results[processed_success], get.routes.processed, 0)
 
-threshold_routes <- vapply(process_results[processed_success], get.routes.above.threshold, 0)
-threshold_stops <- vapply(process_results[processed_success], get.stops.above.threshold, 0)
+threshold_routes <- vapply(process_results[processed_success], get.routes.below.threshold, 0)
+threshold_stops <- vapply(process_results[processed_success], get.stops.below.threshold, 0)
 
 o511['processed'] <- TRUE
 o511['imported'] <- processed_success
@@ -104,22 +131,72 @@ o511[processed_success,'threshold_stops'] <- threshold_stops
 o511[processed_success,'unique_stops_processed'] <- unique_stops_processed
 o511[processed_success,'unique_routes_processed'] <- unique_routes_processed
 
-get.routes.table <- function(x) {x$routes_df_frequency}
-get.stops.table <- function(x) {x$stops_sf_frequency}
+write_csv(o511[,c('Name','threshold_routes','threshold_stops','unique_stops_processed','unique_routes_processed')],"processing_notes_22_mins.csv")
 
-l_routes_df <- lapply(process_results[processed_success], FUN=get.routes.table)
-bay_area_routes_df <- do.call("rbind", l_routes_df)
 
-write_excel_csv(bay_area_routes_df,"827_april_amendment2_routes.csv")
+threshold <- 21 #minutes
 
-l_stops_sf <- lapply(process_results[processed_success], FUN=get.stops.table)
-bay_area_stops_sf <- do.call("rbind", l_stops_sf)
+get.routes.below.threshold <- function(x) {table(x$routes_df_frequency$median_headways>threshold)[['TRUE']]}
+get.stops.below.threshold <- function(x) {table(x$stops_sf_frequency$median_headways>threshold)[['TRUE']]}
 
-#st_write(bay_area_stops_sf,"827_april_amendment2.csv", driver="CSV")
-st_write(bay_area_stops_sf,"827_april_amendment2.gpkg",driver="GPKG")
-st_write(bay_area_stops_sf,"827_april_amendment2.shp", driver="ESRI Shapefile")
+process_message <- vapply(process_results[!processed_success], get.error.message, "")
+unique_stops_processed <- vapply(process_results[processed_success], get.stops.processed, 0)
+unique_routes_processed <- vapply(process_results[processed_success], get.routes.processed, 0)
 
-write_csv(o511,"processing_notes.csv")
+threshold_routes <- vapply(process_results[processed_success], get.routes.below.threshold, 0)
+threshold_stops <- vapply(process_results[processed_success], get.stops.below.threshold, 0)
+
+o511['processed'] <- TRUE
+o511['imported'] <- processed_success
+o511['process_error_message'] <- ""
+o511[!processed_success,'error_message1'] <- process_message
+
+o511['threshold_routes'] <- 0
+o511['threshold_stops'] <- 0
+o511['unique_stops_processed'] <- 0
+o511['unique_routes_processed'] <- 0
+
+o511[processed_success,'threshold_routes'] <- threshold_routes
+o511[processed_success,'threshold_stops'] <- threshold_stops
+o511[processed_success,'unique_stops_processed'] <- unique_stops_processed
+o511[processed_success,'unique_routes_processed'] <- unique_routes_processed
+
+write_csv(o511[,c('Name','threshold_routes','threshold_stops','unique_stops_processed','unique_routes_processed')],"processing_notes_22_mins.csv")
+
+
+
+threshold <- 20 #minutes
+
+get.routes.below.threshold <- function(x) {table(x$routes_df_frequency$median_headways<threshold)[['TRUE']]}
+get.stops.below.threshold <- function(x) {table(x$stops_sf_frequency$median_headways<threshold)[['TRUE']]}
+
+process_message <- vapply(process_results[!processed_success], get.error.message, "")
+unique_stops_processed <- vapply(process_results[processed_success], get.stops.processed, 0)
+unique_routes_processed <- vapply(process_results[processed_success], get.routes.processed, 0)
+
+threshold_routes <- vapply(process_results[processed_success], get.routes.below.threshold, 0)
+threshold_stops <- vapply(process_results[processed_success], get.stops.below.threshold, 0)
+
+o511['processed'] <- TRUE
+o511['imported'] <- processed_success
+o511['process_error_message'] <- ""
+o511[!processed_success,'error_message1'] <- process_message
+
+o511['threshold_routes'] <- 0
+o511['threshold_stops'] <- 0
+o511['unique_stops_processed'] <- 0
+o511['unique_routes_processed'] <- 0
+
+o511[processed_success,'threshold_routes'] <- threshold_routes
+o511[processed_success,'threshold_stops'] <- threshold_stops
+o511[processed_success,'unique_stops_processed'] <- unique_stops_processed
+o511[processed_success,'unique_routes_processed'] <- unique_routes_processed
+
+write_csv(o511[,c('Name','threshold_routes','threshold_stops','unique_stops_processed','unique_routes_processed')],"processing_notes_20_mins.csv")
 
 ```
+
+
+
+
 
