@@ -25,7 +25,9 @@ If you’d like to build the accompanying vignette, then run
 
 ## Example Usage
 
-Output bus stops for sb827 april amendments
+Download data for all bay area operators from MTC 511. 
+
+(Requires 511 api key)
 
 ```
 install.packages("lubridate")
