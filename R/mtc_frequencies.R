@@ -360,6 +360,8 @@ get_route_frequency <- function(gtfs_obj,
   {
     stop("agency gtfs has no published service for the specified period")
   }
+  route_headways$agency_id <- gtfs_obj$agency_df$agency_id
+  route_headways$agency_name <- gtfs_obj$agency_df$agency_name
   return(route_headways)
 }
 
