@@ -1,0 +1,186 @@
+---
+title: "gtfsr headways example"
+author: "Tom Buckley"
+date: "4/17/2018"
+output: html_document
+---
+
+This is an example notebook on applying the MTC fork of the (gtfsr)[https://ropensci.github.io/gtfsr/] package to process sb-827 april amendments for bay area bus stops.  
+
+### Environment
+
+We've tested this process on MacOS and Ubuntu. 
+
+The processing steps below might take up to 30 minutes, depending on the amount of RAM available. If you find that it takes too long on your local machine, you might save time using a large spot instance of this Amazon Machine Image with R Studio Server and the `gtfsr` dependencies installed [here](https://console.aws.amazon.com/ec2/home?region=us-west-2#launchAmi=ami-4b395b33). 
+
+We assume you're using R Studio and have the `gtfsr` package installed (installing dependencies can also take some time). 
+
+If gtfsr is not installed, you can use the following lines to install it:
+
+```{r, eval=FALSE, message=FALSE, include=FALSE, results='hide'}
+if (!require(devtools)) {
+    install.packages('devtools')
+}
+devtools::install_github('BayAreaMetro/gtfsr')
+```
+
+First we need to load some packages and a list of operators for MTC 511.  
+
+```{r, eval=TRUE, message=FALSE, include=FALSE, results='hide'}
+library(gtfsr)
+library(sf)
+library(dplyr)
+library(lubridate)
+library(readr)
+
+#read 511 orgs list
+o511 <- read_csv("https://gist.githubusercontent.com/tibbl35/d49fa2c220733b0072fc7c59e0ac412b/raw/cff45d8c8dd2ea951b83c0be729abe72f35b13f7/511_orgs.csv")
+```
+
+We're just going to process operators that are primarily non-rail and non-ferry for this example. So we first filter non-ferry and non-rail providers. 
+
+```{r, eval=TRUE, message=FALSE, include=FALSE, results='hide'}
+o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
+```
+
+You'll have to set your MTC 511 API Key. You can get one [here](https://511.org/developers/list/apis/).
+
+```{r, eval=FALSE, message=FALSE, include=FALSE, results='hide'}
+#Sys.setenv(APIKEY511 = "YOURKEY")
+```
+
+Next we will download data for every operator and load it into the environment as a list of `gtfs` R objects. 
+
+```{r, eval=TRUE, message=FALSE, include=FALSE, results='hide'}
+o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
+
+api_key = Sys.getenv("APIKEY511")
+
+download_results <- apply(o511, 1, function(x) try(get_mtc_511_gtfs(x['PrivateCode'],api_key)))
+is.error <- function(x) inherits(x, "try-error")
+imported_success <- !vapply(download_results, is.error, logical(1))
+get.error.message <- function(x) {attr(x,"condition")$message}
+import_error_message <- vapply(download_results[!imported_success], get.error.message, "")
+
+o511['downloaded'] <- TRUE
+o511['imported'] <- imported_success
+o511['import_error_message'] <- ""
+o511[!imported_success,'error_message1'] <- import_error_message
+
+```
+
+### Get MTC/CA Headways for Routes and Stops
+
+Next we will get headways for each route for each operators based on MTC/CA's headways definition. We do this by, over the list of data that we downloaded above, using a list apply of the `assign_frequencies_to_all_stops()` function in the `MTC/gtfsr` package. 
+
+Note that we could change the start time and end time to output headways for another time of day. The service types that are available currently are 'weekday', 'saturday', and 'sunday'.
+
+```{r, eval=TRUE, message=FALSE, include=FALSE, results='hide'}
+time_start1 <- "06:00:00" 
+time_end1 <- "19:59:00"
+service_type <- "weekday"
+
+process_results <- lapply(download_results, 
+                          FUN=function(x) {
+                            try(assign_frequencies_to_all_stops(x,
+                                                                time_start1 = time_start1,
+                                                                time_end1 = time_end1,
+                                                                service=service_type))}
+)
+
+is.gtfs.obj <- function(x) inherits(x, "gtfs")
+is.error <- function(x) inherits(x, "try-error")
+processed_success <- vapply(process_results, is.gtfs.obj, logical(1))
+get.error.message <- function(x) {attr(x,"condition")$message}
+
+#save data to disk, with frequencies
+save(download_results, file = "gtfs511_processed_downloads.RData")
+```
+
+Now we have frequency tables for routes and stops on the list of gtfsr objects from 511. 
+
+This means for any given operator we can access their source gtfs data and the frequency data. 
+
+Lets see what this looks like for 1 provider. AC is the first in the o511 data frame of operators, so thats the first element of our processed_results list.  
+
+```{r}
+knitr::kable(sample_n(process_results[[1]]$routes_df_frequency,5))
+knitr::kable(sample_n(process_results[[1]]$stops_sf_frequency,5))
+```
+
+We can also walk through the list and combine the frequencies for routes and stops into 1 table for the region:
+
+```{r, eval=TRUE, message=FALSE, include=FALSE, results='hide'}
+get.routes.table <- function(x) {x$routes_df_frequency}
+get.stops.table <- function(x) {x$stops_sf_frequency}
+
+l_routes_df <- lapply(process_results[processed_success], FUN=get.routes.table)
+bay_area_routes_df <- do.call("rbind", l_routes_df)
+rm(l_routes_df)
+
+l_stops_sf <- lapply(process_results[processed_success], FUN=get.stops.table)
+bay_area_stops_sf <- do.call("rbind", l_stops_sf)
+rm(l_stops_sf)
+```
+
+Again lets look at a sample, this time for the regional data.  
+
+```{r}
+knitr::kable(sample_n(bay_area_stops_sf,5))
+knitr::kable(sample_n(bay_area_routes_df,5))
+```
+
+Finally, lets write the regional tables out to csv and spatial tables for review outside of R. 
+
+```{r}
+write_excel_csv(bay_area_routes_df,"827_april_amendment2_routes.csv")
+
+st_write(bay_area_stops_sf,"827_april_amendment.gpkg",driver="GPKG", layer_options = 'OVERWRITE=YES', update = TRUE)
+st_write(bay_area_stops_sf,"827_april_amendment.shp", driver="ESRI Shapefile", layer_options = 'OVERWRITE=YES', update = TRUE)
+```
+
+We can also easily summarize the results at a regional level in 1 table. For, example, how many routes and stops have headways of 21 minutes of less?
+
+```{r, results='hide'}
+threshold <- 21 #minutes
+
+get.routes.processed <- function(x) {length(unique(x$routes_df_frequency$route_id))}
+get.stops.processed <- function(x) {length(unique(x$stops_sf_frequency$stop_id))}
+get.routes.below.threshold <- function(x) {sum(x$routes_df_frequency$median_headways<threshold,na.rm=TRUE)}
+get.stops.below.threshold <- function(x) {sum(x$stops_sf_frequency$median_headways<threshold,na.rm=TRUE)}
+
+process_message <- vapply(process_results[!processed_success], get.error.message, "")
+unique_stops_processed <- vapply(process_results[processed_success], get.stops.processed, 0)
+unique_routes_processed <- vapply(process_results[processed_success], get.routes.processed, 0)
+
+threshold_routes <- vapply(process_results[processed_success], get.routes.below.threshold, 0)
+threshold_stops <- vapply(process_results[processed_success], get.stops.below.threshold, 0)
+
+o511['processed'] <- TRUE
+o511['imported'] <- processed_success
+o511['process_error_message'] <- ""
+o511[!processed_success,'error_message1'] <- process_message
+
+o511['threshold_routes'] <- 0
+o511['threshold_stops'] <- 0
+o511['unique_stops_processed'] <- 0
+o511['unique_routes_processed'] <- 0
+
+o511[processed_success,'threshold_routes'] <- threshold_routes
+o511[processed_success,'threshold_stops'] <- threshold_stops
+o511[processed_success,'unique_stops_processed'] <- unique_stops_processed
+o511[processed_success,'unique_routes_processed'] <- unique_routes_processed
+
+o511_headway_summary <- o511[,c('Name',
+                                'threshold_routes',
+                                'threshold_stops',
+                                'unique_stops_processed',
+                                'unique_routes_processed')]
+```
+
+Finally, we write that summary out to CSV. 
+
+```{r}
+knitr::kable(o511_headway_summary)
+write_csv(o511_headway_summary,"processing_notes_21_mins.csv")
+```
