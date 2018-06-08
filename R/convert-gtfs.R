@@ -107,6 +107,10 @@ gtfs_as_sf <- function(gtfs_obj) {
   gtfs_obj$stops_sf_weekday <- stops_df_as_sf(stops_df1)
   gtfs_obj$routes_sf <- routes_df_as_sf(gtfs_obj)
   gtfs_obj$stops_sf <- stops_df_as_sf(gtfs_obj$stops_df)
+  gtfs_obj$routes_sf_weekday_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf_weekday, dist="q")
+  gtfs_obj$routes_sf_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf, dist="q")
+  gtfs_obj$stops_sf_weekday_1_2_buffer <- planner_buffer(gtfs_obj$stops_sf_weekday)
+  gtfs_obj$stops_sf_1_2_mile_buffer <- planner_buffer(gtfs_obj$stops_sf)
   return(gtfs_obj)
 }
 
