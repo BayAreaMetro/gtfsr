@@ -212,7 +212,8 @@ count_departures <- function(rt_df, select_service_id, wide=FALSE) {
   return(rt_df_out)
 }
 
-#` Get a set of stops for a route
+#' Get a set of stops for a route
+#' 
 #' @param a gtfsr object
 #' @return count of service by id
 #' @export
@@ -222,7 +223,8 @@ count_trips_for_service <- function(g1) {
                  desc(n_trips)))
 }
 
-#` Get a set of stops for a route
+#' Get a set of stops for a route
+#' 
 #' @param a dataframe output by join_mega_and_hf_routes()
 #' @param route_id the id of the route
 #' @param service_id the service for which to get stops 
@@ -241,6 +243,65 @@ get_stops_for_route <- function(g1, select_route_id, select_service_id) {
   some_stops$route_id <- select_route_id
   return(some_stops)
 }
+
+#' Get a set of stops for a given set of service ids
+#' 
+#' @param g1 gtfsr object
+#' @param service_ids the service for which to get stops 
+#' @return stops for a given service
+#' @export
+get_stops_for_service <- function(g1, select_service_id) {
+  some_trips <- g1$trips_df %>%
+    filter(service_id %in% select_service_id)
+  
+  some_stop_times <- g1$stop_times_df %>% 
+    filter(trip_id %in% some_trips$trip_id) 
+  
+  some_stops <- g1$stops_df %>%
+    filter(stop_id %in% some_stop_times$stop_id)
+  
+  return(some_stops)
+}
+
+#' Get a set of shapes for a route
+#' 
+#'
+#' @param a dataframe output by join_mega_and_hf_routes()
+#' @param route_id the id of the route
+#' @param service_id the service for which to get stops 
+#' @return shapes for a route
+#' @export
+get_shape_for_route <- function(g1, select_route_id, select_service_id) {
+  some_trips <- g1$trips_df %>%
+    filter(route_id %in% select_route_id & service_id %in% select_service_id)
+  
+  some_shapes <- g1$shapes_df %>% 
+    filter(shape_id %in% some_trips$shape_id) 
+  
+  some_shapes$route_id <- select_route_id
+  return(some_shapes)
+}
+
+
+#' Get a set of shapes for a set of routes
+#' 
+#' @param a dataframe output by join_mega_and_hf_routes()
+#' @param route_ids the ids of the routes
+#' @param service_id the service for which to get stops 
+#' @param directional if the routes should by related to a route direction (e.g. inbound, outbound) - currently not implemented
+#' @return shapes for routes
+#' @export
+get_shapes_for_routes <- function(g1, route_ids, select_service_ids, directional=FALSE) {
+  l1 = list()
+  i <- 1
+  for (route_id in route_ids) {
+    l1[[i]] <- get_shape_for_route(g1,route_id, select_service_ids)
+    i <- i + 1
+  }
+  df_routes <- do.call("rbind", l1)
+  return(df_routes)
+}
+
 
 #' TODO: this should get routes for stops by direction_id
 #' should take list of directions and routes (optionally?)
@@ -273,7 +334,8 @@ get_routes_for_stops <- function(stop_ids) {
     filter(route_id %in% some_trips$route_id)
 }
 
-#` Get stop frequency for buses based on mtc headway calculations
+#' Get stop frequency for buses based on mtc headway calculations
+#' 
 #' @param g1 a gtfsr object
 #' @param start_time the start of the period of interest
 #' @param end_time the end of the period of interest
@@ -301,7 +363,8 @@ get_stop_frequency <- function(g1, start_time,
   }
 }
 
-#` Get stop frequency for buses based on mtc headway calculations
+#' Get stop frequency for buses based on mtc headway calculations
+#' 
 #' @param gtfs_df a mega df object made by join_all_gtfs_tables
 #' @param service default to "weekday", can also use "weekend" currently
 #' @return a gtfs mega df object filtered
@@ -332,7 +395,8 @@ get_mtc_511_gtfs <- function(privatecode,api_key) {
   return(g1)
 }
 
-#` Get stop frequency for buses aggregated up to routes
+#' Get stop frequency for buses aggregated up to routes
+#' 
 #' should take: 
 #' @param gtfs_obj a standard gtfsr object
 #' @param start_time, 
@@ -365,7 +429,8 @@ get_route_frequency <- function(gtfs_obj,
   return(route_headways)
 }
 
-#` Get stop frequency for buses based on mtc headway calculations
+#' Get stop frequency for buses based on mtc headway calculations
+#' 
 #' should take: start_time, end_time, gtfs_object, and some kind of scheduleing (array of days or "weekend")
 #' @param gtfs_obj a standard gtfsr object
 #' @return gtfs_obj a gtfsr object with route level 
@@ -399,127 +464,57 @@ assign_frequencies_to_all_stops <- function(gtfs_obj,
   return(gtfs_obj)
 }
 
-
-#` Get stop frequency for buses based on mtc headway calculations
-#' @param x a row from a csv describing mtc 511 data sources
-#' @return a spatial dataframe for april amendment 1, or an error message
+#' Merge gtfsr data frames across gtfs objects
+#' 
+#' merges gtfsr objects
+#' @param gtfs_obj_list a list of standard gtfsr objects
+#' @param dfname dataframe to return
+#' @return one gtfsr dataframe object
 #' @export
-process_april_amendment_1 <- function(x) {
-  agency_id1 <- x[['PrivateCode']]
-  print(agency_id1)
-  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
-                           api_key,
-                           '&operator_id=',
-                           agency_id1)
-  
-  g1 <- zip_request_url %>% import_gtfs
-  
-  time_start1 <- "6:00:00" 
-  time_end1 <- "9:59:00"
-  
-  am_stops <- get_stop_frequency(g1, 
-                                 time_start1, 
-                                 time_end1, 
-                                 service="weekday")
-  
-  time_start1 <- "15:00:00" 
-  time_end1 <- "18:59:00"
-  
-  pm_stops <- get_stop_frequency(g1, 
-                                 time_start1, 
-                                 time_end1, 
-                                 service="weekday")
-  
-  
-  
-  if (has_service(am_stops) & has_service(pm_stops)) {
-    stops_am_pm <- inner_join(am_stops,
-                              pm_stops, 
-                              suffix = c("_am", "_pm"),
-                              by=c("agency_id", 
-                                   "route_id", 
-                                   "direction_id", 
-                                   "trip_headsign", 
-                                   "stop_id"))
-    
-    route_headways <- stops_am_pm %>%
-      group_by(route_id) %>%
-      summarise(headways_am = as.integer(round(median(headway_am),0)), ### we use median here because it is the most representative, 
-                headways_pm = as.integer(round(median(headway_pm),0))) ### and more robust against outliers than mean
-    
-    route_ids <- unique(route_headways$route_id)
-    
-    qualifying_stops <- get_stops_for_routes(g1,route_ids,weekday_service_ids(g1))
-    
-    qualifying_stops_sf <- left_join(qualifying_stops,
-                                     route_headways, 
-                                     by="route_id")
-    
-    qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
-    qualifying_stops_sf <- qualifying_stops_sf %>% 
-      select(stop_id,route_id,stop_name,headways_am,headways_pm)
-    qualifying_stops_sf$agency_id <- agency_id1
+merge_gtfsr_dfs <- function(gtfs_obj_list,dfname) {
+  l_dfs <- lapply(gtfs_obj_list, 
+                            FUN=function(x) {
+                              try(add_agency_columns_to_df(x,dfname))}
+  )
+  is.df.obj <- function(x) inherits(x, "data.frame")
+  processed_success <- vapply(l_dfs, is.df.obj, logical(1))
+  df_bound <- do.call("rbind", l_dfs[processed_success])
+  return(df_bound)
+}
+
+#' Adds columns to a gtfsr data frame with the agency id and name
+#' 
+#' adds agency details to a gtfsr dataframe
+#' @param gtfs_obj a list of standard gtfsr objects
+#' @param dfname dataframe to return
+#' @return select data frame with the agency id and name
+#' @export
+add_agency_columns_to_df <- function(gtfs_obj,dfname) {
+  agency_id <- gtfs_obj$agency_df$agency_id
+  agency_name <- gtfs_obj$agency_df$agency_name
+  df1 <- gtfs_obj[[dfname]]
+  if(has_service(df1)){
+    df1$agency_id <- agency_id
+    df1$agency_name <- agency_name
   }
-  return(qualifying_stops_sf)
+  return(df1)
+}
+
+#' Buffer using common urban planner distances
+#' 
+#' merges gtfsr objects
+#' @param df_sf1 a simple features data frame
+#' @param dist default "h" - for half mile buffers. can also pass "q".
+#' @param crs default epsg 26910. can be any other epsg
+#' @return a simple features data frame with planner buffers
+#' @export
+planner_buffer <- function(df_sf1,dist="h",crs=26910) {
+  distance <- 804.672
+  if(dist=="quarter"){distance <- 402.336}
+  df2 <- st_transform(df_sf1,crs)
+  df3 <- st_buffer(df2,dist=distance)
+  return(df3)
 }
 
 
-
-
-#` Get stop frequency for buses based on mtc headway calculations
-#' @param x a row from a csv describing mtc 511 data sources
-#' @return a spatial dataframe for april amendment 2, or an error message
-#' @export
-process_april_amendment_3 <- function(x) {
-  agency_id1 <- x[['PrivateCode']]
-  print(agency_id1)
-  zip_request_url = paste0('https://api.511.org/transit/datafeeds?api_key=',
-                           api_key,
-                           '&operator_id=',
-                           agency_id1)
-  
-  g1 <- zip_request_url %>% import_gtfs
-  
-  time_start1 <- "08:00:00" 
-  time_end1 <- "19:59:00"
-  
-  sat_stops <- get_stop_frequency(g1, 
-                                  time_start1, 
-                                  time_end1, 
-                                  service="saturday")
-  
-  sun_stops <- get_stop_frequency(g1, 
-                                  time_start1, 
-                                  time_end1, 
-                                  service="sunday")
-  
-  if (has_service(sat_stops) & has_service(sun_stops)) {
-    stops_sat_sun <- inner_join(sat_stops,
-                                sun_stops, 
-                                suffix = c("_sat", "_sun"),
-                                by=c("agency_id", 
-                                     "route_id", 
-                                     "direction_id", 
-                                     "trip_headsign", 
-                                     "stop_id"))
-    route_headways <- stops_sat_sun %>%
-      group_by(route_id) %>%
-      summarise(headways_sat = as.integer(round(median(headway_sat),0)), ### we use median here because it is the most representative, 
-                headways_sun = as.integer(round(median(headway_sun),0))) ### and more robust against outliers than mean
-    
-    route_ids <- unique(route_headways$route_id)
-    
-    qualifying_stops <- get_stops_for_routes(g1,route_ids,saturday_service_ids(g1))
-    
-    qualifying_stops_sf <- left_join(qualifying_stops,
-                                     route_headways, 
-                                     by="route_id")
-    
-    qualifying_stops_sf <- stops_df_as_sf(qualifying_stops_sf)
-    
-    qualifying_stops_sf <- qualifying_stops_sf %>% select(stop_id,route_id,stop_name,headways_sat,headways_sun)
-    qualifying_stops_sf$agency_id <- agency_id1
-  }
-  return(qualifying_stops_sf)
-}
 

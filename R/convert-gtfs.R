@@ -19,13 +19,20 @@ stop_times_df_as_dt <- function(stop_times_df) {
 #' Get a `sf` dataframe for gtfs routes 
 #' 
 #' @param gtfs_obj gtfsr object
+#' @param service default "all". pass "weekday" to get routes that have a service id for m,t,w,th,f service. 
+#' note that for some operators with infrequent or varying weekday service, the service_ids dataframe may to be reviewed. 
 #' @export
 #' @return an sf dataframe for gtfs routes with a multilinestring column
 #' @examples 
 #' routes_sf <- routes_df_as_sf(gtfs_obj)
 #' plot(routes_sf[1,])
-routes_df_as_sf <- function(gtfs_obj) {
+routes_df_as_sf <- function(gtfs_obj, service="all") {
   shape_route_service_df <- shape_route_service(gtfs_obj)
+  if(service=="weekday"){
+    shape_route_service_df <- shape_route_service_df[shape_route_service_df$service_id %in% 
+                                                       weekday_service_ids(gtfs_obj),]
+  }
+  
   routes_latlong_df <- dplyr::inner_join(gtfs_obj$shapes_df, 
                                         shape_route_service_df, 
                                         by="shape_id")
@@ -38,7 +45,7 @@ routes_df_as_sf <- function(gtfs_obj) {
   lines_df$geometry <- sf::st_sfc(list_of_multilinestrings, crs = 4326)
   
   lines_sf <- sf::st_as_sf(lines_df)
-
+  lines_sf$geometry <- st_as_sfc(st_as_text(lines_sf$geometry), crs=4326)
   return(lines_sf)
 }
 
@@ -87,6 +94,20 @@ shapes_df_as_sfg <- function(df) {
                           shape_as_sf_linestring)
 
   return(sf::st_multilinestring(l_linestrings))
+}
+
+#' Get common simple features (sf) for a gtfsr object
+#' 
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with route shapes for weekday service
+#' @export
+gtfs_as_sf <- function(gtfs_obj) {
+  gtfs_obj$routes_sf_weekday <- routes_df_as_sf(gtfs_obj,service="weekday")
+  stops_df1 <- get_stops_for_service(gtfs_obj,weekday_service_ids(gtfs_obj))
+  gtfs_obj$stops_sf_weekday <- stops_df_as_sf(stops_df1)
+  gtfs_obj$routes_sf <- routes_df_as_sf(gtfs_obj)
+  gtfs_obj$stops_sf <- stops_df_as_sf(gtfs_obj$stops_df)
+  return(gtfs_obj)
 }
 
 

@@ -4,10 +4,13 @@
 \alias{routes_df_as_sf}
 \title{Get a \code{sf} dataframe for gtfs routes}
 \usage{
-routes_df_as_sf(gtfs_obj)
+routes_df_as_sf(gtfs_obj, service = "all")
 }
 \arguments{
 \item{gtfs_obj}{gtfsr object}
+
+\item{service}{default "all". pass "weekday" to get routes that have a service id for m,t,w,th,f service.
+note that for some operators with infrequent or varying weekday service, the service_ids dataframe may to be reviewed.}
 }
 \value{
 an sf dataframe for gtfs routes with a multilinestring column
