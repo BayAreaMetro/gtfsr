@@ -96,21 +96,48 @@ shapes_df_as_sfg <- function(df) {
   return(sf::st_multilinestring(l_linestrings))
 }
 
-#' Get common simple features (sf) for a gtfsr object
+#' Get stop points simple features (sf) for a gtfsr object
 #' 
 #' @param gtfs_obj a standard gtfsr object
-#' @return gtfs_obj a gtfsr object with route shapes for weekday service
+#' @return gtfs_obj a gtfsr object with point shapes 
 #' @export
-gtfs_as_sf <- function(gtfs_obj) {
-  gtfs_obj$routes_sf_weekday <- routes_df_as_sf(gtfs_obj,service="weekday")
+gtfs_as_sf_stops <- function(gtfs_obj) {
   stops_df1 <- get_stops_for_service(gtfs_obj,weekday_service_ids(gtfs_obj))
   gtfs_obj$stops_sf_weekday <- stops_df_as_sf(stops_df1)
-  gtfs_obj$routes_sf <- routes_df_as_sf(gtfs_obj)
   gtfs_obj$stops_sf <- stops_df_as_sf(gtfs_obj$stops_df)
-  gtfs_obj$routes_sf_weekday_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf_weekday, dist="q")
-  gtfs_obj$routes_sf_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf, dist="q")
+  return(gtfs_obj)
+}
+
+#' Get point buffers simple features (sf) for a gtfsr object
+#' 
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with point buffer shapes 
+#' @export
+gtfs_as_sf_stops_buffer <- function(gtfs_obj) {
   gtfs_obj$stops_sf_weekday_1_2_buffer <- planner_buffer(gtfs_obj$stops_sf_weekday)
   gtfs_obj$stops_sf_1_2_mile_buffer <- planner_buffer(gtfs_obj$stops_sf)
+  return(gtfs_obj)
+}
+
+#' Get route features (sf) for a gtfsr object
+#' 
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with route shapes 
+#' @export
+gtfs_as_sf_routes <- function(gtfs_obj) {
+  gtfs_obj$routes_sf_weekday <- routes_df_as_sf(gtfs_obj,service="weekday")
+  gtfs_obj$routes_sf <- routes_df_as_sf(gtfs_obj)
+  return(gtfs_obj)
+}
+
+#' Get route buffer features (sf) for a gtfsr object
+#' 
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with route buffer shapes 
+#' @export
+gtfs_as_sf_routes_buffer <- function(gtfs_obj) {
+  gtfs_obj$routes_sf_weekday_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf_weekday, dist="q")
+  gtfs_obj$routes_sf_1_4_mile_buffer <- planner_buffer(gtfs_obj$routes_sf, dist="q")
   return(gtfs_obj)
 }
 
