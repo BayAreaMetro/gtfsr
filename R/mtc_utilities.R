@@ -510,11 +510,24 @@ add_agency_columns_to_df <- function(gtfs_obj,dfname) {
 #' @export
 planner_buffer <- function(df_sf1,dist="h",crs=26910) {
   distance <- 804.672
-  if(dist=="quarter"){distance <- 402.336}
+  if(dist=="q"){distance <- 402.336}
   df2 <- st_transform(df_sf1,crs)
   df3 <- st_buffer(df2,dist=distance)
   return(df3)
 }
 
+
+#' Get common simple features (sf) for a gtfsr object
+#' 
+#' @param gtfs_obj a standard gtfsr object
+#' @return gtfs_obj a gtfsr object with a bunch of simple features tables
+#' @export
+gtfs_as_sf <- function(gtfs_obj) {
+  gtfs_obj$sf_stops <- try(gtfs_as_sf_stops(x))
+  gtfs_obj$sf_stops_buffer <- try(gtfs_as_sf_stops_buffer(x))
+  gtfs_obj$sf_routes <- try(gtfs_as_sf_routes(x))
+  gtfs_obj$sf_routes_buffer <- try(gtfs_as_sf_routes_buffer(x))
+  return(gtfs_obj)
+}
 
 
