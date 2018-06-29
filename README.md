@@ -41,7 +41,7 @@ time_start1 <- "06:00:00"
 time_end1 <- "19:59:00"
 threshold <- 24 #minutes
 
-o511 <- read_csv("https://gist.githubusercontent.com/tibbl35/d49fa2c220733b0072fc7c59e0ac412b/raw/cff45d8c8dd2ea951b83c0be729abe72f35b13f7/511_orgs.csv")
+o511 <- read_csv("https://gist.githubusercontent.com/tbuckl/d49fa2c220733b0072fc7c59e0ac412b/raw/cff45d8c8dd2ea951b83c0be729abe72f35b13f7/511_orgs.csv")
 
 o511 <- o511[!o511$PrimaryMode %in% c('rail','ferry'),]
 
