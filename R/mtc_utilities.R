@@ -457,7 +457,7 @@ assign_frequencies_to_all_stops <- function(gtfs_obj,
                         by="route_id")
     
   stops_sf_frequency <- stops_df_as_sf(stops_df_frequency)
-  stops_sf_frequency <- stops_sf_frequency %>% select(agency_id,stop_id,route_id,stop_name,mean_headways,median_headways,std_dev_headways,observations)
+  stops_sf_frequency <- stops_sf_frequency %>% select(stop_id,route_id,stop_name,mean_headways,median_headways,std_dev_headways,observations)
   
   gtfs_obj$stops_sf_frequency <- stops_sf_frequency
   gtfs_obj$routes_df_frequency <- routes_df_frequency
